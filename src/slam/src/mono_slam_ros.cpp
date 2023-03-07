@@ -1,19 +1,29 @@
-#include<string>
+#include <string>
 //OpenCV
-#include<opencv2/opencv.hpp>
-#include<opencv2/highgui.hpp>
-#include<rclcpp/rclcpp.hpp>
-#include<std_msgs/msg/string.hpp>
-#include<sensor_msgs/msg/image.hpp>
-#include<cv_bridge/cv_bridge.h>
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <cv_bridge/cv_bridge.h>
+//SLAM
+#include <utils.hpp>
+#include <System.h>
+std::string str_vocabulary = "/home/lwx/code/slam/config/ORBvoc.txt";
+std::string camera_settings = "/home/lwx/code/slam/config/camera.yaml";
+;
 class ImgSubscpriber : public rclcpp::Node{
 public:
-    ImgSubscpriber(): Node("listener"),_info_topic_name("frame_info_topic"),_img_topic_name("image_topic"){
+    ImgSubscpriber(): Node("listener"),_info_topic_name("frame_info_topic"),_img_topic_name("image_topic"),
+                        SLAM(str_vocabulary,camera_settings,ORB_SLAM3::System::MONOCULAR, true){
         // _info_subscription = this->create_subscription<std_msgs::msg::String>
         //         (_info_topic_name,10,std::bind(&ImgSubscpriber::info_topic_callback,this,std::placeholders::_1));
         _img_subscription = this->create_subscription<sensor_msgs::msg::Image>
                 (_img_topic_name,10,std::bind(&ImgSubscpriber::img_topic_callback,this,std::placeholders::_1));
         
+    }
+    ~ImgSubscpriber(){
+        SLAM.Shutdown();
     }
 private:
     void info_topic_callback(std_msgs::msg::String::SharedPtr str){
@@ -26,9 +36,11 @@ private:
         // int64_t timestamp = timestamp_sec * 1000 + timestamp_nano_sec / 1e6;
         // RCLCPP_INFO(this->get_logger(),"timestamp: %ld %ld %s",timestamp_sec,timestamp_nano_sec,img->header.frame_id.c_str());
         cv::Mat imCV = dst->image;
-        cv::imshow("listener",imCV);
+        // cv::imshow("listener",imCV);
+        SLAM.TrackMonocular(imCV, getCUrrentTimeStamp());
         cv::waitKey(10);
     }
+    ORB_SLAM3::System SLAM;
     std::string _info_topic_name,_img_topic_name;
     std::string _topic_name; 
     std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> _info_subscription;

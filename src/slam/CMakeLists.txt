@@ -20,9 +20,10 @@ find_package(OpenCV REQUIRED)
 find_package(Eigen3 3.3.0 REQUIRED)
 find_package(Pangolin REQUIRED)
 find_package (glog REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(cv_bridge REQUIRED)
+
 include_directories(
   include/slam
   include/ORB_SLAM3
@@ -34,10 +35,19 @@ link_directories(
   include/ORB_SLAM3/lib
 )
 add_executable(mono_slam src/mono_slam.cpp)
+add_executable(ros_mono src/mono_slam_ros.cpp)
 ament_target_dependencies(mono_slam
-  rclcpp
+  rclcpp 
+)
+ament_target_dependencies(ros_mono
+  rclcpp std_msgs sensor_msgs cv_bridge
 )
 target_link_libraries(mono_slam
+  ${OpenCV_LIBS}
+  ${Pangolin_LIBRARIES}
+  ORB_SLAM3
+)
+target_link_libraries(ros_mono
   ${OpenCV_LIBS}
   ${Pangolin_LIBRARIES}
   ORB_SLAM3
@@ -58,3 +68,8 @@ install(TARGETS mono_slam
   DESTINATION
   lib/${PROJECT_NAME}
 )
+install(TARGETS ros_mono
+  DESTINATION
+  lib/${PROJECT_NAME}
+)
+
