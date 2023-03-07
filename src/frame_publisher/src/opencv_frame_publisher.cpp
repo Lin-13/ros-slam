@@ -3,9 +3,12 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/videoio.hpp>
 #include <rclcpp/rclcpp.hpp>
+//ROS
+#include<sensor_msgs/msg/image.hpp>
+#include<cv_bridge/cv_bridge.h>
 #include <std_msgs/msg/string.hpp>
+//C++
 #include <chrono>
-#include <sstream>
 #include <string>
 using namespace std::chrono_literals;
 class ImgPublisher: public rclcpp::Node{
@@ -13,7 +16,8 @@ public:
     ImgPublisher():Node("opencv_frame_node"){
         RCLCPP_INFO(rclcpp::get_logger("publisher"),"Setup");
         _cap.open(0,cv::CAP_ANY);
-        _publisher = this->create_publisher<std_msgs::msg::String>("frame_size_topic",10);
+        _info_publisher = this->create_publisher<std_msgs::msg::String>("frame_info_topic",10);
+        _image_publisher = this->create_publisher<sensor_msgs::msg::Image>("image_topic",10);
         _timer = this->create_wall_timer(30ms,std::bind(&ImgPublisher::time_callback,this));
     }
     ~ImgPublisher(){
@@ -21,25 +25,30 @@ public:
     }
 private:
     void time_callback(){
-        RCLCPP_INFO(rclcpp::get_logger("publisher"),"Reading");
         if (_cap.isOpened()){
-            cv::Mat img;
+            cv::Mat img,raw;
             _cap.read(img);
+            if(img.empty()){
+                RCLCPP_INFO(rclcpp::get_logger("publisher"),"Get an empty frame");
+                return;
+            }
             std_msgs::msg::String str;
-            std::stringstream str_stream;
-            std::string size;
-            
-            str_stream << img.size();
-            str_stream >> size;
-            str.data = "Reveive a Frame in OpenCV cap:" + size + "TimeStamp: ";
-            _publisher->publish(str);
+            str.data = std::string("Reveive a Frame in OpenCV cap: ") + 
+                    std::to_string(img.size().height) + " " + 
+                    std::to_string(img.size().width) + 
+                    " TimeStamp: ";
+            RCLCPP_INFO(rclcpp::get_logger("publisher"),str.data.c_str());
+            sensor_msgs::msg::Image::SharedPtr msg = cv_bridge::CvImage(std_msgs::msg::Header(),"bgr8",img).toImageMsg();
+            _info_publisher->publish(str);
+            _image_publisher->publish(*msg);
         }else{
             RCLCPP_INFO(rclcpp::get_logger("publisher"),"Device not open");
         }
     }
     rclcpp::TimerBase::SharedPtr _timer;
     cv::VideoCapture _cap;
-    std::shared_ptr<rclcpp::Publisher<std_msgs::msg::String>> _publisher;
+    std::shared_ptr<rclcpp::Publisher<std_msgs::msg::String>> _info_publisher;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _image_publisher;
 };
 int main(int argc,char** argv){
     rclcpp::init(argc,argv);
