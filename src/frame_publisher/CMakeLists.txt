@@ -21,29 +21,55 @@ find_package(cv_bridge REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(glog REQUIRED)
 #OpenCV
 find_package(OpenCV REQUIRED)
-
-include_directories(${OpenCV_INCLUDE_DIRS})
+# set(OpenCV_INCLUDE_DIRS )
+# message(${OpenCV_LIBS})
+include_directories(
+  ${OpenCV_INCLUDE_DIRS}
+  include/frame_publisher
+  include/OrbbecSDK/include
+)
+link_directories(
+  include/OrbbecSDK/lib
+)
 add_executable(publisher src/opencv_frame_publisher.cpp)
+add_executable(publisher_obsdk src/ob_frame_publisher.cpp)
 add_executable(listener src/opencv_frame_listener.cpp)
 ament_target_dependencies(publisher
+  rclcpp std_msgs cv_bridge sensor_msgs
+)
+
+target_link_libraries(publisher
+  opencv_core
+  opencv_highgui
+  opencv_imgproc
+  opencv_videoio
+)
+
+target_link_libraries(publisher_obsdk
+  OrbbecSDK
+  opencv_core
+  opencv_highgui
+  opencv_imgproc
+  opencv_videoio
+)
+ament_target_dependencies(publisher_obsdk
   rclcpp std_msgs cv_bridge sensor_msgs
 )
 ament_target_dependencies(listener
   rclcpp std_msgs cv_bridge sensor_msgs
 )
-
-target_link_libraries(publisher
-  ${OpenCV_LIBS}
-)
 install(TARGETS 
-  publisher
+  publisher_obsdk
   DESTINATION
   lib/${PROJECT_NAME}
 )
 install(TARGETS 
   listener
+  publisher
+  
   DESTINATION
   lib/${PROJECT_NAME}
 )

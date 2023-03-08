@@ -4,3 +4,4 @@ install
 log
 src/slam/include/ORB_SLAM3
 src/frame_publisher/include/OrbbecSDK
+Log

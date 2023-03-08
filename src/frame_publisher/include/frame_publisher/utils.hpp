@@ -1,5 +1,6 @@
 #include<mutex>
 #include <opencv2/core.hpp>
+#include<string>
 class ImgBuffer{
 public:
     ImgBuffer():_empty(1){}
