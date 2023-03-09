@@ -52,6 +52,9 @@ private:
                 RCLCPP_INFO(rclcpp::get_logger("publisher"),"Get an empty frame");
                 return;
             }
+            //get time stamp now
+            std_msgs::msg::Header header;
+            header.stamp = this->get_clock()->now();
             cv::flip(img_depth,img_depth,1);
             std_msgs::msg::String str;
             double min,max;
@@ -67,8 +70,9 @@ private:
                     "min " + std::to_string(min) + " max " +std::to_string(max)
                     ;
             RCLCPP_INFO(rclcpp::get_logger("publisher"),str.data.c_str());
-            sensor_msgs::msg::Image::SharedPtr msg = cv_bridge::CvImage(std_msgs::msg::Header(),gen_bridge_encoding(img),img).toImageMsg();
-            sensor_msgs::msg::Image::SharedPtr msg_depth = cv_bridge::CvImage(std_msgs::msg::Header(),gen_bridge_encoding(img_depth),img_depth).toImageMsg();
+            
+            sensor_msgs::msg::Image::SharedPtr msg = cv_bridge::CvImage(header,gen_bridge_encoding(img),img).toImageMsg();
+            sensor_msgs::msg::Image::SharedPtr msg_depth = cv_bridge::CvImage(header,gen_bridge_encoding(img_depth),img_depth).toImageMsg();
             _info_publisher->publish(str);
             _depth_image_publisher->publish(*msg_depth);
             usleep(1*1000);
@@ -77,13 +81,18 @@ private:
         }
         if (enable_color){
             if(readObdeviceColor(_pipe,img)){
+                //get time stamp now
+                std_msgs::msg::Header header;
+                header.stamp = this->get_clock()->now();
+
                 std_msgs::msg::String str;
                 str.data = std::string("ObSDK Reveive a Color Frame : ") + 
                         "type " + type2str(img.type()) + " " +
                         std::to_string(img.size().height) + " " + 
                         std::to_string(img.size().width);
                 RCLCPP_INFO(rclcpp::get_logger("publisher"),str.data.c_str());
-                sensor_msgs::msg::Image::SharedPtr msg = cv_bridge::CvImage(std_msgs::msg::Header(),"bgr8",img).toImageMsg();
+                sensor_msgs::msg::Image::SharedPtr msg = 
+                        cv_bridge::CvImage(header,gen_bridge_encoding(img),img).toImageMsg();
                 _info_publisher->publish(str);
                 _bgr_image_publisher->publish(*msg);
             }else{
@@ -92,6 +101,10 @@ private:
         }
         if (enable_depth){
             if(readObdeviceDepth(_pipe,img_depth)){
+                //get time stamp now
+                std_msgs::msg::Header header;
+                header.stamp = this->get_clock()->now();
+
                 double min,max;
                 cv::minMaxLoc(img_depth,&min,&max);
                 std_msgs::msg::String str;
@@ -104,7 +117,8 @@ private:
                         ;
                 RCLCPP_INFO(rclcpp::get_logger("publisher"),str.data.c_str());
                 //type::16UC1
-                sensor_msgs::msg::Image::SharedPtr msg_depth = cv_bridge::CvImage(std_msgs::msg::Header(),"mono16",img_depth).toImageMsg();
+                sensor_msgs::msg::Image::SharedPtr msg_depth = 
+                        cv_bridge::CvImage(header,gen_bridge_encoding(img_depth),img_depth).toImageMsg();
                 cv::imshow("pub depth",img_depth);
                 cv::waitKey(10);
                 _info_publisher->publish(str);

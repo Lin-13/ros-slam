@@ -45,7 +45,6 @@ public:
                     _bgr_img_topic_name("bgr_image_topic"),
                     _depth_img_topic_name("depth_image_topic"),
                     SLAM(str_vocabulary,camera_settings,ORB_SLAM3::System::RGBD, true)
-                    // _collected_img_num(0)
     {
         _info_subscription = this->create_subscription<std_msgs::msg::String>
                 (_info_topic_name,10,std::bind(&MultiImgSubscpriber::info_topic_callback,this,std::placeholders::_1));
@@ -64,12 +63,14 @@ public:
     }
 private:
     void info_topic_callback(std_msgs::msg::String::SharedPtr str){
-        // RCLCPP_INFO(this->get_logger(),"get frameinfo :%s",str->data.c_str());
+        RCLCPP_DEBUG(this->get_logger(),"get frameinfo :%s",str->data.c_str());
     }
     void bgr_img_topic_callback(sensor_msgs::msg::Image::SharedPtr img){
         // RCLCPP_INFO(this->get_logger(),"Receive a color frame");    
         cv_bridge::CvImagePtr dst =  cv_bridge::toCvCopy(img,"bgr8");
         color_img = dst->image;
+        timestamp = dst->header.stamp.sec *1e3 + dst->header.stamp.nanosec * 1.0e-6;
+        RCLCPP_INFO(this->get_logger(),"timestamp : %lf",timestamp);
         _color_img_ready = true;
         color_img_buffer.write(color_img);
         update();
@@ -86,18 +87,17 @@ private:
     void update(){
         if(_color_img_ready && _depth_img_ready){
             // SLAM.TrackMonocular(color_img,getCUrrentTimeStamp());
-            SLAM.TrackRGBD(color_img,depth_img,getCUrrentTimeStamp());
+            SLAM.TrackRGBD(color_img,depth_img,timestamp);
             _color_img_ready = false;
             _depth_img_ready = false;
         }
         
     }
+    std::string _info_topic_name,_bgr_img_topic_name,_depth_img_topic_name;
+    ORB_SLAM3::System SLAM;
     bool _color_img_ready, _depth_img_ready;
     cv::Mat color_img,depth_img;
-    // std::atomic<int> _collected_img_num;
-    ORB_SLAM3::System SLAM;
-    std::string _info_topic_name,_bgr_img_topic_name,_depth_img_topic_name;
-    std::string _topic_name; 
+    double timestamp;
     std::shared_ptr<rclcpp::Subscription<std_msgs::msg::String>> _info_subscription;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _bgr_img_subscription,_depth_img_subscription;
 };

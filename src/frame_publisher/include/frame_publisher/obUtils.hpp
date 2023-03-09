@@ -36,15 +36,14 @@ std::vector<cv::Mat> processFrames(std::vector<std::shared_ptr<ob::Frame>> frame
             // IR or Depth Frame
             cv::Mat cvtMat;
             cv::Mat rawMat = cv::Mat(videoFrame->height(), videoFrame->width(), CV_16UC1, videoFrame->data());
-            float   scale;
+            float scale;
             if(videoFrame->type() == OB_FRAME_DEPTH) {
-                std::cout << "Depth " << videoFrame->pixelAvailableBitSize() - 10<< " bits" << std::endl;
+                // std::cout << "Depth " << videoFrame->pixelAvailableBitSize() - 10<< " bits" << std::endl;
                 scale = 1.0f / pow(2, videoFrame->pixelAvailableBitSize() - 10);
             }
             else {
                 scale = 1.0f / pow(2, videoFrame->pixelAvailableBitSize() - 8);
             }
-
             // scale = 1/16
             cv::convertScaleAbs(rawMat, cvtMat, scale);
             // cvtMat = rawMat;
