@@ -2,6 +2,7 @@
 // #include "libobsensor/hpp/Pipeline.hpp"
 // #include "libobsensor/hpp/Error.hpp"
 #include <vector>
+#include <opencv2/opencv.hpp>
 std::vector<cv::Mat> processFrames(std::vector<std::shared_ptr<ob::Frame>> frames) {
     std::vector<cv::Mat> mats;
     for(auto frame: frames) {
@@ -58,7 +59,7 @@ std::vector<cv::Mat> processFrames(std::vector<std::shared_ptr<ob::Frame>> frame
     }
     return mats;
 }
-void StartObdevice(std::shared_ptr<ob::Pipeline> pipe,bool color_enable = true, bool depth_enable = false){
+void StartObdevice(std::shared_ptr<ob::Pipeline> pipe,bool color_enable = true, bool depth_enable = true){
     std::shared_ptr<ob::Config> config = std::make_shared<ob::Config>();
 
     try{
@@ -90,12 +91,16 @@ void StartObdevice(std::shared_ptr<ob::Pipeline> pipe,bool color_enable = true, 
         std::cerr<<"Current device is not support color sensor!"<<std::endl;   
         exit(EXIT_FAILURE);
     }
-
+    //d2c
+    config->setAlignMode(ALIGN_D2C_SW_MODE);
     pipe -> start(config);
     //获取镜像属性是否有可写的权限
-    if(pipe->getDevice()->isPropertySupported(OB_PROP_COLOR_MIRROR_BOOL, OB_PERMISSION_WRITE)) {
+    if(color_enable && pipe->getDevice()->isPropertySupported(OB_PROP_COLOR_MIRROR_BOOL, OB_PERMISSION_WRITE)) {
         //设置镜像
         pipe->getDevice()->setBoolProperty(OB_PROP_COLOR_MIRROR_BOOL, true);
+    }
+    if(depth_enable && pipe->getDevice()->isPropertySupported(OB_PROP_DEPTH_MIRROR_BOOL, OB_PERMISSION_WRITE)) {
+        pipe->getDevice()->setBoolProperty(OB_PROP_DEPTH_MIRROR_BOOL, true);
     }
 }
 inline bool readObdeviceColor(std::shared_ptr<ob::Pipeline> pipe,cv::Mat& img,uint time_out_ms = 10){
@@ -121,6 +126,7 @@ inline bool readObdeviceDepth(std::shared_ptr<ob::Pipeline> pipe,cv::Mat& img,ui
     std::vector<cv::Mat> imgs;
     imgs = processFrames({frameSet->depthFrame()});
     if(imgs.size()>0){
+        // std::cout << "img size" << imgs.size() <<std::endl;
         cv::Mat src = imgs[0];
         img = src.clone();
         return 1;
@@ -128,12 +134,30 @@ inline bool readObdeviceDepth(std::shared_ptr<ob::Pipeline> pipe,cv::Mat& img,ui
         return 0;
     }
 }
+inline bool readObdeviceColorandDepth(std::shared_ptr<ob::Pipeline> pipe,cv::Mat& color, cv::Mat& depth,uint time_out_ms = 10){
+    auto frameSet = pipe -> waitForFrames(time_out_ms);
+    if(frameSet == nullptr){
+        return 0;
+    }
+    std::vector<cv::Mat> imgs;
+    imgs = processFrames({frameSet->colorFrame(),frameSet->depthFrame()});
+    if(imgs.size() ==2){
+        cv::Mat src = imgs[0];
+        color = src.clone();
+        src = imgs[1];
+        depth = src.clone();
+        return 1;
+    }else{
+        return 0;
+    }
+}
+// Thread
 int ob_read_device(std::shared_ptr<bool> ob_enable_read, uint time_cap_ms = 30) try {
     ob::Pipeline pipe;
     std::shared_ptr<ob::Config> config = std::make_shared<ob::Config>();
 
-    int windowsWidth = 0;
-    int windowsHeight = 0;
+    // int windowsWidth = 0;
+    // int windowsHeight = 0;
     try{
         auto profiles = pipe.getStreamProfileList(OB_SENSOR_COLOR);
 
@@ -143,8 +167,8 @@ int ob_read_device(std::shared_ptr<bool> ob_enable_read, uint time_cap_ms = 30) 
         }catch(ob::Error &e){
             colorProfile = profiles->getVideoStreamProfile(640,0,OB_FORMAT_UNKNOWN,30);
         }
-        windowsWidth = colorProfile->width();
-        windowsHeight = colorProfile->height();
+        // windowsWidth = colorProfile->width();
+        // windowsHeight = colorProfile->height();
         config->enableStream(colorProfile);
     }catch(ob::Error &e){
         std::cerr<<"Current device is not support color sensor!"<<std::endl;   
@@ -159,7 +183,7 @@ int ob_read_device(std::shared_ptr<bool> ob_enable_read, uint time_cap_ms = 30) 
     }
 
     while(*ob_enable_read) {
-        auto frameSet = pipe.waitForFrames(100);
+        auto frameSet = pipe.waitForFrames(time_cap_ms);
         if(frameSet == nullptr) {
             continue;
         }

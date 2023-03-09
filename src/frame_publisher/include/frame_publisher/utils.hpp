@@ -13,7 +13,7 @@ public:
         std::lock_guard<std::mutex> guard(_img_mutex);
         dst = _img_single_buffer.clone();
         _empty = true;
-}
+    }
     bool isEmpty(){
         return _empty;
     }

@@ -36,10 +36,14 @@ link_directories(
 )
 add_executable(mono_slam src/mono_slam.cpp)
 add_executable(ros_mono src/mono_slam_ros.cpp)
+add_executable(ros_rgbd src/rgbd_slam_ros.cpp)
 ament_target_dependencies(mono_slam
   rclcpp 
 )
 ament_target_dependencies(ros_mono
+  rclcpp std_msgs sensor_msgs cv_bridge
+)
+ament_target_dependencies(ros_rgbd
   rclcpp std_msgs sensor_msgs cv_bridge
 )
 target_link_libraries(mono_slam
@@ -48,6 +52,11 @@ target_link_libraries(mono_slam
   ORB_SLAM3
 )
 target_link_libraries(ros_mono
+  ${OpenCV_LIBS}
+  ${Pangolin_LIBRARIES}
+  ORB_SLAM3
+)
+target_link_libraries(ros_rgbd
   ${OpenCV_LIBS}
   ${Pangolin_LIBRARIES}
   ORB_SLAM3
@@ -64,7 +73,11 @@ if(BUILD_TESTING)
 endif()
 
 ament_package()
-install(TARGETS mono_slam
+install(
+  TARGETS 
+  mono_slam
+  ros_mono
+  ros_rgbd
   DESTINATION
   lib/${PROJECT_NAME}
 )

@@ -10,6 +10,7 @@
 //C++
 #include <chrono>
 #include <string>
+#include <unistd.h>
 // My utils
 #include <obUtils.hpp>
 #include<utils.hpp>
@@ -17,9 +18,10 @@
 using namespace std::chrono_literals;
 class ImgPublisher: public rclcpp::Node{
 public:
-    ImgPublisher(std::shared_ptr<ob::Pipeline> pipe):Node("opencv_frame_node"),enable_color(false),enable_depth(true){
+    ImgPublisher(std::shared_ptr<ob::Pipeline> pipe):Node("opencv_frame_node"),enable_color(true),enable_depth(true){
         RCLCPP_INFO(rclcpp::get_logger("publisher"),"Setup");
         //ob Pipe 
+        
         _pipe = pipe;
         StartObdevice(_pipe,enable_color,enable_depth);
         _info_publisher = this->create_publisher<std_msgs::msg::String>("frame_info_topic",10);
@@ -32,34 +34,62 @@ public:
     }
 private:
     void time_callback(){
-        cv::Mat img;
-        if (enable_color && readObdeviceColor(_pipe,img)){
+        cv::Mat img,img_depth;
+        if (enable_color && enable_depth){
+            if(!readObdeviceColorandDepth(_pipe,img,img_depth)){
+                RCLCPP_INFO(rclcpp::get_logger("publisher"),"Get an empty frame");
+                return;
+            }
             std_msgs::msg::String str;
             str.data = std::string("ObSDK Reveive a Color Frame : ") + 
                     "type " + type2str(img.type()) + " " +
                     std::to_string(img.size().height) + " " + 
-                    std::to_string(img.size().width);
+                    std::to_string(img.size().width) + " " +
+                    "\tDepth Frame: " +
+                    "type " + type2str(img_depth.type()) + " " +
+                    std::to_string(img_depth.size().height) + " " + 
+                    std::to_string(img_depth.size().width) 
+                    ;
             RCLCPP_INFO(rclcpp::get_logger("publisher"),str.data.c_str());
             sensor_msgs::msg::Image::SharedPtr msg = cv_bridge::CvImage(std_msgs::msg::Header(),"bgr8",img).toImageMsg();
+            sensor_msgs::msg::Image::SharedPtr msg_depth = cv_bridge::CvImage(std_msgs::msg::Header(),"bgr8",img_depth).toImageMsg();
             _info_publisher->publish(str);
+            _depth_image_publisher->publish(*msg_depth);
+            usleep(1*1000);
             _bgr_image_publisher->publish(*msg);
-            img.TYPE_MASK;
-            img.type();
-        }else{
-            RCLCPP_INFO(rclcpp::get_logger("publisher"),"Get an empty color frame");
+            return;
         }
-        if (enable_depth && readObdeviceDepth(_pipe,img)){
-            std_msgs::msg::String str;
-            str.data = std::string("ObSDK Reveive a Depth Frame : ") + 
-                    "type " + type2str(img.type()) + " " +
-                    std::to_string(img.size().height) + " " + 
-                    std::to_string(img.size().width);
-            RCLCPP_INFO(rclcpp::get_logger("publisher"),str.data.c_str());
-            sensor_msgs::msg::Image::SharedPtr msg = cv_bridge::CvImage(std_msgs::msg::Header(),"bgr8",img).toImageMsg();
-            _info_publisher->publish(str);
-            _bgr_image_publisher->publish(*msg);
-        }else{
-            RCLCPP_INFO(rclcpp::get_logger("publisher"),"Get an empty depth frame");
+        if (enable_color){
+            if(readObdeviceColor(_pipe,img)){
+                std_msgs::msg::String str;
+                str.data = std::string("ObSDK Reveive a Color Frame : ") + 
+                        "type " + type2str(img.type()) + " " +
+                        std::to_string(img.size().height) + " " + 
+                        std::to_string(img.size().width);
+                RCLCPP_INFO(rclcpp::get_logger("publisher"),str.data.c_str());
+                sensor_msgs::msg::Image::SharedPtr msg = cv_bridge::CvImage(std_msgs::msg::Header(),"bgr8",img).toImageMsg();
+                _info_publisher->publish(str);
+                _bgr_image_publisher->publish(*msg);
+            }else{
+                RCLCPP_INFO(rclcpp::get_logger("publisher"),"Get an empty color frame");
+            }
+        }
+        if (enable_depth){
+            if(readObdeviceDepth(_pipe,img_depth)){
+                std_msgs::msg::String str;
+                str.data = std::string("ObSDK Reveive a Depth Frame : ") + 
+                        "type " + type2str(img_depth.type()) + " " +
+                        std::to_string(img_depth.size().height) + " " + 
+                        std::to_string(img_depth.size().width);
+                RCLCPP_INFO(rclcpp::get_logger("publisher"),str.data.c_str());
+                sensor_msgs::msg::Image::SharedPtr msg_depth = cv_bridge::CvImage(std_msgs::msg::Header(),"bgr8",img_depth).toImageMsg();
+                cv::imshow("pub depth",img_depth);
+                cv::waitKey(10);
+                _info_publisher->publish(str);
+                _depth_image_publisher->publish(*msg_depth);
+            }else{
+                RCLCPP_INFO(rclcpp::get_logger("publisher"),"Get an empty depth frame");
+            }
         }
     }
     bool enable_color,enable_depth;
