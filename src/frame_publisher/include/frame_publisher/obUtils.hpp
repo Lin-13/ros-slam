@@ -38,13 +38,18 @@ std::vector<cv::Mat> processFrames(std::vector<std::shared_ptr<ob::Frame>> frame
             cv::Mat rawMat = cv::Mat(videoFrame->height(), videoFrame->width(), CV_16UC1, videoFrame->data());
             float   scale;
             if(videoFrame->type() == OB_FRAME_DEPTH) {
+                std::cout << "Depth " << videoFrame->pixelAvailableBitSize() - 10<< " bits" << std::endl;
                 scale = 1.0f / pow(2, videoFrame->pixelAvailableBitSize() - 10);
             }
             else {
                 scale = 1.0f / pow(2, videoFrame->pixelAvailableBitSize() - 8);
             }
+
+            // scale = 1/16
             cv::convertScaleAbs(rawMat, cvtMat, scale);
-            cv::cvtColor(cvtMat, rstMat, cv::COLOR_GRAY2RGB);
+            // cvtMat = rawMat;
+            rstMat = cvtMat;
+            // cv::cvtColor(cvtMat, rstMat, cv::COLOR_GRAY2RGB);
         }
         else if(videoFrame->type() == OB_FRAME_IR && videoFrame->format() == OB_FORMAT_Y8) {
             cv::Mat rawMat = cv::Mat(videoFrame->height(), videoFrame->width(), CV_8UC1, videoFrame->data());

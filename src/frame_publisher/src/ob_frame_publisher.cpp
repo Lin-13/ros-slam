@@ -33,6 +33,18 @@ public:
         _pipe ->stop();
     }
 private:
+    std::string gen_bridge_encoding(cv::Mat& img){
+        int cv_type = img.type();
+        std::string encoding;
+        if(cv_type ==CV_8UC3){
+            encoding = "bgr8";
+        }else if(cv_type == CV_16UC1){
+            encoding = "mono16";
+        }else if(cv_type == CV_8UC1){
+            encoding = "mono8";
+        }
+        return encoding;
+    }
     void time_callback(){
         cv::Mat img,img_depth;
         if (enable_color && enable_depth){
@@ -40,7 +52,10 @@ private:
                 RCLCPP_INFO(rclcpp::get_logger("publisher"),"Get an empty frame");
                 return;
             }
+            cv::flip(img_depth,img_depth,1);
             std_msgs::msg::String str;
+            double min,max;
+            cv::minMaxLoc(img_depth,&min,&max);
             str.data = std::string("ObSDK Reveive a Color Frame : ") + 
                     "type " + type2str(img.type()) + " " +
                     std::to_string(img.size().height) + " " + 
@@ -48,11 +63,12 @@ private:
                     "\tDepth Frame: " +
                     "type " + type2str(img_depth.type()) + " " +
                     std::to_string(img_depth.size().height) + " " + 
-                    std::to_string(img_depth.size().width) 
+                    std::to_string(img_depth.size().width) + " " +
+                    "min " + std::to_string(min) + " max " +std::to_string(max)
                     ;
             RCLCPP_INFO(rclcpp::get_logger("publisher"),str.data.c_str());
-            sensor_msgs::msg::Image::SharedPtr msg = cv_bridge::CvImage(std_msgs::msg::Header(),"bgr8",img).toImageMsg();
-            sensor_msgs::msg::Image::SharedPtr msg_depth = cv_bridge::CvImage(std_msgs::msg::Header(),"bgr8",img_depth).toImageMsg();
+            sensor_msgs::msg::Image::SharedPtr msg = cv_bridge::CvImage(std_msgs::msg::Header(),gen_bridge_encoding(img),img).toImageMsg();
+            sensor_msgs::msg::Image::SharedPtr msg_depth = cv_bridge::CvImage(std_msgs::msg::Header(),gen_bridge_encoding(img_depth),img_depth).toImageMsg();
             _info_publisher->publish(str);
             _depth_image_publisher->publish(*msg_depth);
             usleep(1*1000);
@@ -76,13 +92,19 @@ private:
         }
         if (enable_depth){
             if(readObdeviceDepth(_pipe,img_depth)){
+                double min,max;
+                cv::minMaxLoc(img_depth,&min,&max);
                 std_msgs::msg::String str;
+                cv::flip(img_depth,img_depth,1);
                 str.data = std::string("ObSDK Reveive a Depth Frame : ") + 
                         "type " + type2str(img_depth.type()) + " " +
                         std::to_string(img_depth.size().height) + " " + 
-                        std::to_string(img_depth.size().width);
+                        std::to_string(img_depth.size().width) + " " +
+                        "min " + std::to_string(min) + " max " +std::to_string(max)
+                        ;
                 RCLCPP_INFO(rclcpp::get_logger("publisher"),str.data.c_str());
-                sensor_msgs::msg::Image::SharedPtr msg_depth = cv_bridge::CvImage(std_msgs::msg::Header(),"bgr8",img_depth).toImageMsg();
+                //type::16UC1
+                sensor_msgs::msg::Image::SharedPtr msg_depth = cv_bridge::CvImage(std_msgs::msg::Header(),"mono16",img_depth).toImageMsg();
                 cv::imshow("pub depth",img_depth);
                 cv::waitKey(10);
                 _info_publisher->publish(str);
