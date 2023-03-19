@@ -28,6 +28,8 @@ private:
         if (_cap.isOpened()){
             cv::Mat img,raw;
             _cap.read(img);
+            std_msgs::msg::Header header;
+            header.stamp = this->get_clock()->now();
             if(img.empty()){
                 RCLCPP_INFO(rclcpp::get_logger("publisher"),"Get an empty frame");
                 return;
@@ -36,9 +38,9 @@ private:
             str.data = std::string("Reveive a Frame in OpenCV cap: ") + 
                     std::to_string(img.size().height) + " " + 
                     std::to_string(img.size().width) + 
-                    " TimeStamp: ";
+                    " TimeStamp: " + std::to_string(header.stamp.sec);
             RCLCPP_INFO(rclcpp::get_logger("publisher"),str.data.c_str());
-            sensor_msgs::msg::Image::SharedPtr msg = cv_bridge::CvImage(std_msgs::msg::Header(),"bgr8",img).toImageMsg();
+            sensor_msgs::msg::Image::SharedPtr msg = cv_bridge::CvImage(header,"bgr8",img).toImageMsg();
             _info_publisher->publish(str);
             _image_publisher->publish(*msg);
         }else{
