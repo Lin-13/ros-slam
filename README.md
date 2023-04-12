@@ -70,7 +70,7 @@ Ros2 version : **Foxy**
 
 ## Dependencies
 
-**Ros**
+Ros
 
 > rclcpp
 >
