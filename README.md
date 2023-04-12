@@ -6,7 +6,6 @@ Rum ORB-SLAM3 with Ros2.
 
 you need run this Cmake Project in C++17.
 
-
 Include three packages:
 
 **slam** : use open source **ORB-SLAM3** to build the mono or RGBD system.
@@ -27,7 +26,6 @@ ros2 run slam ros-rgbd
 
 mono-slam read single frame in device using OpenCV itself, and others wait for ros2 topic bgr_image_topic , depth_image_topic(if need) and frame_info_topic(not significant).
 
-
 **frame_publisher**: use **OrbbecSDK** or **OpenCV** to read RGBD frame or Mono frame to publish in some topic.
 
 you can run with:
@@ -40,7 +38,7 @@ ros2 run frame_publisher publisher #Using OpenCV
 ros2 run frame_publisher publisher_obsdk #Using OrbbecSDK
 ```
 
-Similarly, you can only get depth frame by the **publisher_obsdk.** 
+Similarly, you can only get depth frame by the **publisher_obsdk.**
 
 **img_py (TODO):**
 
@@ -93,3 +91,5 @@ Python
 > torch *(for test & TODO)*
 >
 > `<default package in ros2>`
+
+Code edit and compile with **Visual Studio Code**.
