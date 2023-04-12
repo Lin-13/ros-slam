@@ -80,7 +80,7 @@ Ros
 >
 > sensor_msgs
 
-ORB-SLAM3
+ORB-SLAM3 (build with OpenCV 406)
 
 Orbbec-SDK
 
